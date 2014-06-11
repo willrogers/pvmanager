@@ -48,10 +48,15 @@ public class PVManager {
 
     private static volatile Executor defaultNotificationExecutor = org.epics.pvmanager.util.Executors.localThread();
     private static volatile DataSource defaultDataSource = null;
+    private static volatile int scannerPoolSize = Math.max(1, Runtime.getRuntime().getRuntime().availableProcessors() - 1);
+    
+    private static volatile ScheduledExecutorService readScannerExecutorService;
+    private static volatile ScheduledExecutorService asyncWriteExecutor;
+    
+    private static volatile boolean passiveScanningEnable;
+    
     private static final ScheduledExecutorService workerPool = Executors.newScheduledThreadPool(Math.max(1, Runtime.getRuntime().availableProcessors() - 1),
             org.epics.pvmanager.util.Executors.namedPool("PVMgr Worker "));
-    private static ScheduledExecutorService readScannerExecutorService = workerPool;
-    private static ScheduledExecutorService asyncWriteExecutor = workerPool;
 
     /**
      * Changes the default executor on which all notifications are going to be posted.
@@ -160,7 +165,10 @@ public class PVManager {
      * @return the current executor
      */
     public static ScheduledExecutorService getAsyncWriteExecutor() {
-        return asyncWriteExecutor;
+        if (asyncWriteExecutor == null) {
+	    asyncWriteExecutor = getReadScannerExecutorService();
+	}
+	return asyncWriteExecutor;
     }
 
     /**
@@ -179,7 +187,12 @@ public class PVManager {
      * @return the service for the read operations
      */
     public static ScheduledExecutorService getReadScannerExecutorService() {
-        return readScannerExecutorService;
+        if (readScannerExecutorService == null) {
+	    readScannerExecutorService = Executors.newScheduledThreadPool(
+		    scannerPoolSize, org.epics.pvmanager.util.Executors
+			    .namedPool("PVMgr Worker "));
+	}
+	return readScannerExecutorService;
     }
 
     /**
@@ -190,6 +203,42 @@ public class PVManager {
      */
     public static void setReadScannerExecutorService(ScheduledExecutorService readScannerExecutorService) {
         PVManager.readScannerExecutorService = readScannerExecutorService;
+    }
+    
+     /**
+      * Returns the configured size of the scanner thread pool which will be use for the default executor service
+      * 
+      * @return scannerPoolSize the size of the pv manager scanner thread pool
+      */
+    public static int getScannerPoolSize() {
+	return scannerPoolSize;
+    }
+
+    /**
+     * Set the scanner pool size
+     * 
+     * @param scannerPoolSize the default size of the pv manager scanner thread pool
+     */
+    public static void setScannerPoolSize(int scannerPoolSize) {
+	PVManager.scannerPoolSize = scannerPoolSize;
+    }
+
+    /**
+     * Is passive scanning enabled in the pv scanner
+     * 
+     * @return passiveScanningEnable  
+     */
+    public static boolean isPassiveScanningEnable() {
+        return passiveScanningEnable;
+    }
+
+    /**
+     * Enable passive scanning for the pv scanner
+     * 
+     * @param passiveScanningEnable
+     */
+    public static void setPassiveScanningEnable(boolean passiveScanningEnable) {
+        PVManager.passiveScanningEnable = passiveScanningEnable;
     }
     
 }
