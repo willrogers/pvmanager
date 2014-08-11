@@ -88,15 +88,21 @@ class LocalChannelHandler extends MultiplexedChannelHandler<Object, Object> {
         try {
             // XXX Actual write is not enforcing the type!
             
+            // Enums require special treatment
             if (VEnum.class.equals(type)) {
                 // Handle enum writes
                 int newIndex = -1;
-                // TODO calculate the newIndex from the new value
-                // Add error message if type does not match
                 VEnum firstEnum = (VEnum) initialValue;
+                List<String> labels = firstEnum.getLabels();
+                if (newValue instanceof Number) {
+                    newIndex = ((Number) newValue).intValue();
+                } else if (newValue instanceof String) {
+                    newIndex = labels.indexOf((String) newValue);
+                } else {
+                    throw new IllegalArgumentException("Value" + newValue + " can not be accepted by VEnum.");
+                }
                 newValue = ValueFactory.newVEnum(newIndex, firstEnum.getLabels(), alarmNone(), timeNow());
             } else {
-            
                 // If the string can be parse to a number, do it
                 if (newValue instanceof String) {
                     String value = (String) newValue;

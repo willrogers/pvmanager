@@ -65,7 +65,7 @@ public class LocalDataSource extends DataSource {
     }
     
     private List<Object> parseName(String channelName) {
-        List<Object> tokens = FunctionParser.parseFunctionWithScalarOrArrayArguments(".+", channelName, CHANNEL_SYNTAX_ERROR_MESSAGE);
+        List<Object> tokens = FunctionParser.parseFunctionAnyParameter(".+", channelName);
         String nameAndType = tokens.get(0).toString();
         String name = nameAndType;
         String type = null;
@@ -94,9 +94,13 @@ public class LocalDataSource extends DataSource {
 
         LocalChannelHandler channel = (LocalChannelHandler) getChannels().get(channelHandlerLookupName(channelName));
         channel.setType((String) parsedTokens.get(1));
-        if (parsedTokens.size() > 2) {
+        if (parsedTokens.size() == 3) {
             if (channel != null) {
                 channel.setInitialValue(parsedTokens.get(2));
+            }
+        } else if (parsedTokens.size() > 3) {
+            if (channel != null) {
+                channel.setInitialValue(parsedTokens.subList(2, parsedTokens.size()));
             }
         } else if (zeroInitialization) {
             Logger.getLogger(this.getClass().getName()).warning("Using zero initialization for channel " + channelName);
